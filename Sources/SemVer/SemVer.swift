@@ -34,12 +34,12 @@
 /// comprehensive version string called `semVer`. These properties are also
 /// available via `description` and `debugDescription` respectively.
 ///
-public struct Version: Codable, CustomStringConvertible, CustomDebugStringConvertible {
+public struct Version: Sendable, Codable, CustomStringConvertible, CustomDebugStringConvertible {
     public enum Errors: Error {
         case prereleaseInvalid
         case metadataInvalid
     }
-    
+
     /// Increment MAJOR version when you make incompatible API changes
     public let major: UInt
     /// Increment MINOR version when you add functionality in a backward compatible manner
@@ -67,8 +67,7 @@ public struct Version: Codable, CustomStringConvertible, CustomDebugStringConver
     /// - 1.0.0-x-y-z.--
     ///
     public let prerelease: String?
-    private static let prereleaseRegex = #/^(?P<prerelease>[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/#
-    
+
     /// Build metadata MAY be denoted by appending a plus sign and a series of dot separated
     /// identifiers immediately following the patch or pre-release version.
     ///
@@ -86,45 +85,41 @@ public struct Version: Codable, CustomStringConvertible, CustomDebugStringConver
     /// - 1.0.0+21AF26D3----117B344092BD
     ///
     public let metadata: String?
-    private static let metadataRegex = #/^(?P<metadata>[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/#
-    
+
     /// Version initialiser
     ///
     /// **N.B.** The initialiser will throw if the `prerelease` or  `metadata` strings
     /// don't met the SemVer limitations
-    init(major: UInt, minor: UInt, patch: UInt, prerelease: String? = nil, metadata: String? = nil) throws {
+    public init(major: UInt, minor: UInt, patch: UInt, prerelease: String? = nil, metadata: String? = nil) throws(Errors) {
         self.major = major
         self.minor = minor
         self.patch = patch
-        
+
         if let prerelease {
-            guard let prereleaseMatch = prerelease.firstMatch(of: Self.prereleaseRegex)?.output.prerelease else {
+            let prereleaseRegex = #/^(?P<prerelease>[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/#
+            guard let prereleaseMatch = prerelease.firstMatch(of: prereleaseRegex)?.output.prerelease else {
                 throw Errors.prereleaseInvalid
             }
-            
             self.prerelease = String(prereleaseMatch)
-            
         } else {
             self.prerelease = nil
         }
-        
+
         if let metadata {
-            guard let metadataMatch = metadata.firstMatch(of: Self.metadataRegex)?.output.metadata else {
+            let metadataRegex = #/^(?P<metadata>[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/#
+            guard let metadataMatch = metadata.firstMatch(of: metadataRegex)?.output.metadata else {
                 throw Errors.metadataInvalid
             }
-            
             self.metadata = String(metadataMatch)
-            
         } else {
             self.metadata = nil
         }
     }
-    
-    
+
     public var version: String {
         return "\(major).\(minor).\(patch)"
     }
-    
+
     public var semVer: String {
         var versionString = "\(major).\(minor).\(patch)"
         if let prerelease {
@@ -135,9 +130,9 @@ public struct Version: Codable, CustomStringConvertible, CustomDebugStringConver
         }
         return versionString
     }
-    
+
     public var description: String { version }
-    
+
     public var debugDescription: String { semVer }
 }
 
@@ -152,7 +147,7 @@ extension Version: Comparable {
         if lhs.patch != rhs.patch {
             return lhs.patch < rhs.patch
         }
-        
+
         // Compare prerelease identifiers
         if let lhsPrerelease = lhs.prerelease, let rhsPrerelease = rhs.prerelease {
             if lhsPrerelease != rhsPrerelease {
@@ -164,17 +159,17 @@ extension Version: Comparable {
         } else if lhs.prerelease == nil, rhs.prerelease != nil {
             return false
         }
-        
+
         return true
     }
-    
+
     public static func == (lhs: Version, rhs: Version) -> Bool {
         return lhs.major == rhs.major &&
         lhs.minor == rhs.minor &&
         lhs.patch == rhs.patch &&
         lhs.prerelease == rhs.prerelease
     }
-    
+
     /// `===` provides an "is identical" comparision that includes version metadata.
     /// - Parameters:
     ///   - lhs: A ``Version``
@@ -191,35 +186,33 @@ extension Version: Comparable {
 
 extension Version: LosslessStringConvertible {
     public init?(_ description: String) {
-        let semVerRegex =  #/^(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)(?:-(?P<prerelease>[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+(?P<metadata>[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?$/#
-        
+        let semVerRegex = #/^(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)(?:-(?P<prerelease>[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+(?P<metadata>[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?$/#
+
         let matched = description.matches(of: semVerRegex)
-        
+
         guard let result = matched.first else { return nil }
-        
+
         let componentMatch = result.output
-        
+
         // We must have a major value and it can't be zero
         guard let majorValue = UInt(String(componentMatch.major)), majorValue != .zero else { return nil }
-        
+
         major = majorValue
         minor = UInt(String(componentMatch.minor)) ?? .zero
         patch = UInt(String(componentMatch.patch)) ?? .zero
-        
+
         if let prereleaseSubstring = componentMatch.prerelease {
             prerelease = String(prereleaseSubstring)
         } else {
             prerelease = nil
         }
-        
+
         if let metadataSubstring = componentMatch.metadata {
             metadata = String(metadataSubstring)
         } else {
             metadata = nil
         }
     }
-    
-    
 }
 
 extension Version: ExpressibleByStringLiteral {
@@ -227,7 +220,6 @@ extension Version: ExpressibleByStringLiteral {
         self = .init(value)!
     }
 }
-
 
 public extension Version {
     static var max: Version {

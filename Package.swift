@@ -1,24 +1,21 @@
-// swift-tools-version: 5.9
-// The swift-tools-version declares the minimum version of Swift required to build this package.
-
+// swift-tools-version: 6.2
 import PackageDescription
 
 let package = Package(
     name: "SemVer",
     platforms: [.macOS(.v13), .iOS(.v16)],
     products: [
-        // Products define the executables and libraries a package produces, making them visible to other packages.
-        .library(
-            name: "SemVer",
-            targets: ["SemVer"]),
+        .library(name: "SemVer", targets: ["SemVer"]),
     ],
     targets: [
-        // Targets are the basic building blocks of a package, defining a module or a test suite.
-        // Targets can depend on other targets in this package and products from dependencies.
         .target(
-            name: "SemVer"),
+            name: "SemVer",
+            swiftSettings: [.swiftLanguageMode(.v6)]
+        ),
         .testTarget(
             name: "SemVerTests",
-            dependencies: ["SemVer"]),
+            dependencies: ["SemVer"],
+            swiftSettings: [.swiftLanguageMode(.v6)]
+        ),
     ]
 )
