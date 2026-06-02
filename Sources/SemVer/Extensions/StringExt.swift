@@ -28,15 +28,28 @@ extension String {
             if i >= components1.count { return .ascending }
             if i >= components2.count { return .descending }
 
-            let component1 = components1[i]
-            let component2 = components2[i]
+            let c1 = components1[i]
+            let c2 = components2[i]
 
-            if let num1 = Int(component1), let num2 = Int(component2) {
-                if num1 < num2 { return .ascending }
-                if num1 > num2 { return .descending }
-            } else {
-                if component1.lexicographicallyPrecedes(component2) { return .ascending }
-                if component2.lexicographicallyPrecedes(component1) { return .descending }
+            let c1IsNumeric = c1.allSatisfy(\.isNumber)
+            let c2IsNumeric = c2.allSatisfy(\.isNumber)
+
+            switch (c1IsNumeric, c2IsNumeric) {
+            case (true, true):
+                // SemVer prohibits leading zeros, so length-then-lex gives correct integer ordering
+                // for arbitrarily large values without overflow risk.
+                if c1.count != c2.count {
+                    return c1.count < c2.count ? .ascending : .descending
+                }
+                if c1 < c2 { return .ascending }
+                if c1 > c2 { return .descending }
+            case (true, false):
+                return .ascending   // numeric < alphanumeric per SemVer 2.0
+            case (false, true):
+                return .descending
+            case (false, false):
+                if c1.lexicographicallyPrecedes(c2) { return .ascending }
+                if c2.lexicographicallyPrecedes(c1) { return .descending }
             }
         }
 

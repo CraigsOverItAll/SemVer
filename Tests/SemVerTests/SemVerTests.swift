@@ -111,6 +111,38 @@ struct VersionTests {
         #expect(onePointRC1 < onePointZero)
     }
 
+    // Bug fix: 1.0.0 < 1.0.0 was incorrectly returning true
+    @Test func equalVersionsAreNotLessThan() throws {
+        let a = try Version(major: 1, minor: 2, patch: 3)
+        let b = try Version(major: 1, minor: 2, patch: 3)
+        #expect(!(a < b))
+        #expect(!(b < a))
+
+        let aPre = try Version(major: 1, minor: 0, patch: 0, prerelease: "alpha")
+        let bPre = try Version(major: 1, minor: 0, patch: 0, prerelease: "alpha")
+        #expect(!(aPre < bPre))
+    }
+
+    // Bug fix: 0.y.z versions are valid SemVer and must parse
+    @Test func zeroMajorVersionParses() {
+        assertStringCreation("0.1.0")
+        assertStringCreation("0.0.1")
+        assertStringCreation("0.1.0-alpha")
+    }
+
+    // Bug fix: numeric identifiers have lower precedence than alphanumeric
+    @Test func numericVsAlphanumericPrecedence() throws {
+        // "1" < "alpha" per SemVer 2.0 §11.4.1
+        let numeric = try Version(major: 1, minor: 0, patch: 0, prerelease: "1")
+        let alpha = try Version(major: 1, minor: 0, patch: 0, prerelease: "alpha")
+        #expect(numeric < alpha)
+
+        // Large numeric identifiers that overflow Int compare correctly
+        let big = try Version(major: 1, minor: 0, patch: 0, prerelease: "99999999999999999999")
+        let bigger = try Version(major: 1, minor: 0, patch: 0, prerelease: "100000000000000000000")
+        #expect(big < bigger)
+    }
+
     private func assertStringCreation(_ sutStr: String) {
         let sutVersion = Version(sutStr)
         #expect(sutVersion != nil)

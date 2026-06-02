@@ -160,7 +160,7 @@ extension Version: Comparable {
             return false
         }
 
-        return true
+        return false
     }
 
     public static func == (lhs: Version, rhs: Version) -> Bool {
@@ -194,8 +194,7 @@ extension Version: LosslessStringConvertible {
 
         let componentMatch = result.output
 
-        // We must have a major value and it can't be zero
-        guard let majorValue = UInt(String(componentMatch.major)), majorValue != .zero else { return nil }
+        guard let majorValue = UInt(String(componentMatch.major)) else { return nil }
 
         major = majorValue
         minor = UInt(String(componentMatch.minor)) ?? .zero
