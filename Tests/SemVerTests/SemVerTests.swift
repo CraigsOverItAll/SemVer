@@ -1,82 +1,72 @@
 //
 //  SemVerTests.swift
-//  
+//
 //
 //  Created by Craig Phillips on 13/10/2023.
-//  
 //
-//  
+//
+//
 
 @testable import SemVer
-import XCTest
+import Testing
 
-final class VersionTests: XCTestCase {
+struct VersionTests {
     private let onePointZero = try! Version(major: 1, minor: 0, patch: 0)
 
-    override func setUpWithError() throws {
-        // Put setup code here. This method is called before the invocation of each test method in the class.
-    }
-
-    override func tearDownWithError() throws {
-        // Put teardown code here. This method is called after the invocation of each test method in the class.
-    }
-
-    func testVersionComparisons() throws {
+    @Test func versionComparisons() throws {
         let firstMeta = try Version(major: 1, minor: 0, patch: 0, metadata: "some-commit-hash")
-        
-        XCTAssertTrue(onePointZero == firstMeta)
-        
-        XCTAssertFalse(onePointZero === firstMeta)
-        
+
+        #expect(onePointZero == firstMeta)
+        #expect(!(onePointZero === firstMeta))
+
         let firstPreRelease = try Version(major: 1, minor: 0, patch: 0, prerelease: "alpha")
-        
-        XCTAssertLessThan(firstPreRelease, onePointZero)
-        
+        #expect(firstPreRelease < onePointZero)
+
         let second = try Version(major: 2, minor: 0, patch: 0)
-        
-        XCTAssertTrue(onePointZero < second)
-        
+        #expect(onePointZero < second)
+
         let secondPreRelease = try Version(major: 2, minor: 0, patch: 0, prerelease: "alpha")
-        
-        XCTAssertFalse(second < secondPreRelease)
-        XCTAssertTrue(secondPreRelease > onePointZero)
+        #expect(!(second < secondPreRelease))
+        #expect(secondPreRelease > onePointZero)
     }
 
-    func testSemVerEmitted() throws {
+    @Test func semVerEmitted() throws {
         let basicVersion = try Version(major: 1, minor: 2, patch: 3)
-        XCTAssertEqual(basicVersion.semVer, "1.2.3")
-        
+        #expect(basicVersion.semVer == "1.2.3")
+
         let prereleaseVersion = try Version(major: 1, minor: 2, patch: 3, prerelease: "alpha")
-        XCTAssertEqual(prereleaseVersion.semVer, "1.2.3-alpha")
-        
+        #expect(prereleaseVersion.semVer == "1.2.3-alpha")
+
         let metaVersion = try Version(major: 1, minor: 2, patch: 3, metadata: "123.456")
-        XCTAssertEqual(metaVersion.semVer, "1.2.3+123.456")
+        #expect(metaVersion.semVer == "1.2.3+123.456")
 
         let complexVersion = try Version(major: 1, minor: 2, patch: 3, prerelease: "beta2", metadata: "123.456")
-        XCTAssertEqual(complexVersion.semVer, "1.2.3-beta2+123.456")
+        #expect(complexVersion.semVer == "1.2.3-beta2+123.456")
     }
-    
-    func testCreateFromString() throws {
+
+    @Test func createFromString() {
         assertStringCreation("1.2.3")
         assertStringCreation("1.2.3-alpha")
         assertStringCreation("1.2.3+123.456")
         assertStringCreation("1.2.3-beta2+123.456")
     }
-    
-    func testThrowInvalid() throws {
-        XCTAssertThrowsError(try Version(major: 1, minor: 0, patch: 0, prerelease: "#invalid"))
-        XCTAssertThrowsError(try Version(major: 1, minor: 0, patch: 0, prerelease: "alpha", metadata: "#invalid"))
+
+    @Test func throwInvalid() {
+        #expect(throws: Version.Errors.prereleaseInvalid) {
+            try Version(major: 1, minor: 0, patch: 0, prerelease: "#invalid")
+        }
+        #expect(throws: Version.Errors.metadataInvalid) {
+            try Version(major: 1, minor: 0, patch: 0, prerelease: "alpha", metadata: "#invalid")
+        }
     }
-    
-    func testStringAssignment() throws {
+
+    @Test func stringAssignment() {
         var sut: Version = "1.2.3"
-        
-        XCTAssertGreaterThan(sut, onePointZero)
-        
+        #expect(sut > onePointZero)
+
         let one23 = sut
-        
         sut = "1.2.3-alpha"
-        XCTAssertLessThan(sut, one23)
+        #expect(sut < one23)
     }
 
     /// **Pre-release:**
@@ -85,49 +75,77 @@ final class VersionTests: XCTestCase {
     /// **Metadata:**
     /// Examples: 1.0.0-alpha+001, 1.0.0+20130313144700, 1.0.0-beta+exp.sha.5114f85, 1.0.0+21AF26D3----117B344092BD
     ///
-    /// ** Precedence**
+    /// **Precedence:**
     /// Example: 1.0.0 < 2.0.0 < 2.1.0 < 2.1.1
     /// Example: 1.0.0-alpha < 1.0.0
     /// Example: 1.0.0-alpha < 1.0.0-alpha.1 < 1.0.0-alpha.beta < 1.0.0-beta < 1.0.0-beta.2 < 1.0.0-beta.11 < 1.0.0-rc.1 < 1.0.0
-    func testSemVerOrgExamples() throws {
-        // Example: 1.0.0 < 2.0.0 < 2.1.0 < 2.1.1
+    @Test func semVerOrgExamples() throws {
         let onePointZero = try Version(major: 1, minor: 0, patch: 0)
         let twoPointZero = try Version(major: 2, minor: 0, patch: 0)
         let twoPointOne = try Version(major: 2, minor: 1, patch: 0)
         let twoPointOneOne = try Version(major: 2, minor: 1, patch: 1)
-        XCTAssertTrue(onePointZero < twoPointZero)
-        XCTAssertTrue(twoPointZero < twoPointOne)
-        XCTAssertTrue(twoPointOne < twoPointOneOne)
+        #expect(onePointZero < twoPointZero)
+        #expect(twoPointZero < twoPointOne)
+        #expect(twoPointOne < twoPointOneOne)
 
-        // Example: 1.0.0-alpha < 1.0.0
         let onePointAlpha = try Version(major: 1, minor: 0, patch: 0, prerelease: "alpha")
-        XCTAssertTrue(onePointAlpha < onePointZero)
+        #expect(onePointAlpha < onePointZero)
 
-        // Example: 1.0.0-alpha < 1.0.0-alpha.1 < 1.0.0-alpha.beta < 1.0.0-beta < 1.0.0-beta.2 < 1.0.0-beta.11 < 1.0.0-rc.1 < 1.0.0
         let onePointAlpha1 = try Version(major: 1, minor: 0, patch: 0, prerelease: "alpha.1")
-        XCTAssertTrue(onePointAlpha < onePointAlpha1)
+        #expect(onePointAlpha < onePointAlpha1)
 
         let onePointAlphaBeta = try Version(major: 1, minor: 0, patch: 0, prerelease: "alpha.beta")
-        XCTAssertTrue(onePointAlpha1 < onePointAlphaBeta)
+        #expect(onePointAlpha1 < onePointAlphaBeta)
 
         let onePointBeta = try Version(major: 1, minor: 0, patch: 0, prerelease: "beta")
-        XCTAssertTrue(onePointAlphaBeta < onePointBeta)
+        #expect(onePointAlphaBeta < onePointBeta)
 
         let onePointBeta2 = try Version(major: 1, minor: 0, patch: 0, prerelease: "beta.2")
-        XCTAssertTrue(onePointBeta < onePointBeta2)
+        #expect(onePointBeta < onePointBeta2)
 
         let onePointBeta11 = try Version(major: 1, minor: 0, patch: 0, prerelease: "beta.11")
-        XCTAssertTrue(onePointBeta2 < onePointBeta11)
+        #expect(onePointBeta2 < onePointBeta11)
 
         let onePointRC1 = try Version(major: 1, minor: 0, patch: 0, prerelease: "rc.1")
-        XCTAssertTrue(onePointBeta11 < onePointRC1)
-        XCTAssertTrue(onePointRC1 < onePointZero)
+        #expect(onePointBeta11 < onePointRC1)
+        #expect(onePointRC1 < onePointZero)
     }
 
-    func assertStringCreation(_ sutStr: String) {
+    // Bug fix: 1.0.0 < 1.0.0 was incorrectly returning true
+    @Test func equalVersionsAreNotLessThan() throws {
+        let a = try Version(major: 1, minor: 2, patch: 3)
+        let b = try Version(major: 1, minor: 2, patch: 3)
+        #expect(!(a < b))
+        #expect(!(b < a))
+
+        let aPre = try Version(major: 1, minor: 0, patch: 0, prerelease: "alpha")
+        let bPre = try Version(major: 1, minor: 0, patch: 0, prerelease: "alpha")
+        #expect(!(aPre < bPre))
+    }
+
+    // Bug fix: 0.y.z versions are valid SemVer and must parse
+    @Test func zeroMajorVersionParses() {
+        assertStringCreation("0.1.0")
+        assertStringCreation("0.0.1")
+        assertStringCreation("0.1.0-alpha")
+    }
+
+    // Bug fix: numeric identifiers have lower precedence than alphanumeric
+    @Test func numericVsAlphanumericPrecedence() throws {
+        // "1" < "alpha" per SemVer 2.0 §11.4.1
+        let numeric = try Version(major: 1, minor: 0, patch: 0, prerelease: "1")
+        let alpha = try Version(major: 1, minor: 0, patch: 0, prerelease: "alpha")
+        #expect(numeric < alpha)
+
+        // Large numeric identifiers that overflow Int compare correctly
+        let big = try Version(major: 1, minor: 0, patch: 0, prerelease: "99999999999999999999")
+        let bigger = try Version(major: 1, minor: 0, patch: 0, prerelease: "100000000000000000000")
+        #expect(big < bigger)
+    }
+
+    private func assertStringCreation(_ sutStr: String) {
         let sutVersion = Version(sutStr)
-        
-        XCTAssertNotNil(sutVersion)
-        XCTAssertEqual(sutVersion!.semVer, sutStr)
+        #expect(sutVersion != nil)
+        #expect(sutVersion?.semVer == sutStr)
     }
 }
